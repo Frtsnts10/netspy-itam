@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Sidebar from "./Sidebar";
 
 interface AppShellProps {
   header: ReactNode;
@@ -7,9 +8,12 @@ interface AppShellProps {
 
 export default function AppShell({ header, children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col">
+    <div className="h-screen bg-gray-950 flex flex-col overflow-hidden">
       {header}
-      <main className="flex-1 p-6">{children}</main>
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

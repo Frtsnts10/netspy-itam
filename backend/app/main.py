@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, devices, scanner, telemetry
+from app.api import auth, devices, scanner, telemetry, support, alerts, software
 from app.core.config import settings
 
 app = FastAPI(
@@ -22,6 +22,9 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
 app.include_router(scanner.router, prefix="/api/scan", tags=["Scanner"])
 app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"])
+app.include_router(support.router, prefix="/api/support", tags=["Support"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+app.include_router(software.router, prefix="/api/software", tags=["Software"])
 
 
 @app.get("/")

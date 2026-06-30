@@ -1,7 +1,14 @@
 import { Toaster } from "sonner";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import LoginPage from "./components/auth/LoginPage";
+import AppShell from "./components/layout/AppShell";
+import Header from "./components/layout/Header";
 import DashboardPage from "./pages/Dashboard";
+import DevicesPage from "./pages/Devices";
+import SoftwarePage from "./pages/SoftwarePage";
+import NetworkMapPage from "./pages/NetworkMapPage";
+import AlertsPage from "./pages/AlertsPage";
 import { Loader2 } from "lucide-react";
 
 export default function App() {
@@ -15,8 +22,19 @@ export default function App() {
     );
   }
 
+  if (!user) {
+    return (
+      <>
+        <Toaster position="top-right" theme="dark" />
+        <LoginPage onSignIn={signIn} />
+      </>
+    );
+  }
+
+  const header = <Header email={user.email || ""} onSignOut={signOut} />;
+
   return (
-    <>
+    <BrowserRouter>
       <Toaster
         position="top-right"
         theme="dark"
@@ -28,14 +46,16 @@ export default function App() {
           },
         }}
       />
-      {user ? (
-        <DashboardPage
-          email={user.email || ""}
-          onSignOut={signOut}
-        />
-      ) : (
-        <LoginPage onSignIn={signIn} />
-      )}
-    </>
+      <AppShell header={header}>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
+          <Route path="/software" element={<SoftwarePage />} />
+          <Route path="/map" element={<NetworkMapPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppShell>
+    </BrowserRouter>
   );
 }

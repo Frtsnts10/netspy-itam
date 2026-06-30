@@ -121,6 +121,18 @@ async def scan_subnet() -> list[dict]:
                 device_data["cpu_model"] = old.get("cpu_model")
                 device_data["ram_gb"] = old.get("ram_gb")
                 device_data["os_version"] = old.get("os_version")
+        else:
+            # Device not in database, it's a NEW device
+            try:
+                alert_data = {
+                    "type": "critical",
+                    "title": "Unknown Device Detected",
+                    "description": f"A new unauthorized device (MAC: {mac}) joined the network at {ip}.",
+                    "is_read": False,
+                }
+                sb.table("alerts").insert(alert_data).execute()
+            except Exception as e:
+                print(f"Failed to create alert: {e}")
 
         sb.table("devices").upsert(
             device_data,

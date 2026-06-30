@@ -37,6 +37,75 @@ def collect_system_info() -> dict:
     }
 
 
+def get_installed_software() -> list:
+    software_list = []
+    if platform.system() != "Windows":
+        return software_list
+
+    import winreg
+    
+    def enum_keys(key, path):
+        try:
+            with winreg.OpenKey(key, path, 0, winreg.KEY_READ | winreg.KEY_WOW64_32KEY) as k:
+                for i in range(0, winreg.QueryInfoKey(k)[0]):
+                    try:
+                        yield winreg.EnumKey(k, i)
+                    except EnvironmentError:
+                        break
+            with winreg.OpenKey(key, path, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as k:
+                for i in range(0, winreg.QueryInfoKey(k)[0]):
+                    try:
+                        yield winreg.EnumKey(k, i)
+                    except EnvironmentError:
+                        break
+        except Exception:
+            pass
+
+    paths = [
+        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+    ]
+
+    seen = set()
+    for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+        for path in paths:
+            for subkey in enum_keys(root, path):
+                try:
+                    with winreg.OpenKey(root, f"{path}\\{subkey}") as k:
+                        name = winreg.QueryValueEx(k, "DisplayName")[0]
+                        if not name:
+                            continue
+                        
+                        try:
+                            version = winreg.QueryValueEx(k, "DisplayVersion")[0]
+                        except:
+                            version = ""
+                            
+                        try:
+                            publisher = winreg.QueryValueEx(k, "Publisher")[0]
+                        except:
+                            publisher = ""
+                            
+                        try:
+                            install_date = winreg.QueryValueEx(k, "InstallDate")[0]
+                        except:
+                            install_date = ""
+
+                        key_tuple = (name, version)
+                        if key_tuple not in seen:
+                            seen.add(key_tuple)
+                            software_list.append({
+                                "name": str(name),
+                                "version": str(version),
+                                "publisher": str(publisher),
+                                "install_date": str(install_date)
+                            })
+                except:
+                    continue
+                    
+    return software_list
+
+
 def send_telemetry(backend_url: str, api_key: str) -> bool:
     info = collect_system_info()
     try:
@@ -48,6 +117,22 @@ def send_telemetry(backend_url: str, api_key: str) -> bool:
         )
         if resp.status_code == 200:
             print(f"[OK] Telemetry sent successfully for {info['hostname']}")
+            
+            # Send Software Telemetry
+            print("Gathering software inventory...")
+            software = get_installed_software()
+            if software:
+                sw_resp = requests.post(
+                    f"{backend_url}/api/software/telemetry",
+                    json={"mac_address": info["mac_address"], "software": software},
+                    headers={"X-API-Key": api_key},
+                    timeout=30,
+                )
+                if sw_resp.status_code == 200:
+                    print(f"[OK] Sent {len(software)} software items")
+                else:
+                    print(f"[ERROR] Failed to send software: {sw_resp.text}")
+                    
             return True
         else:
             print(f"[ERROR] Server returned {resp.status_code}: {resp.text}")
